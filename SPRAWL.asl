@@ -76,9 +76,9 @@ init
         case 87826432:
             version = "Steam v1.0";
             break;
-    default:
-        print("Unknown version detected");
-        break;
+        default:
+            print("Unknown version detected");
+            break;
     }
 }
 
@@ -89,7 +89,8 @@ onStart
 }
 
 gameTime 
-{   //part of the autostart countdown
+{   
+    //part of the autostart countdown
     if(vars.setStartTime)
     {
       vars.setStartTime = false;
@@ -99,15 +100,15 @@ gameTime
 
 update
 {
-// Part of Micrologists magic. Assigns current.loading to true if anything is currently loading
-vars.Watchers.UpdateAll(game);
-current.loading = vars.Watchers["syncLoadCount"].Current > 0;
-var worldString = vars.FNameToString(vars.Watchers["worldFName"].Current);
-current.world = worldString != "None" ? worldString : old.world;
+    // Part of Micrologists magic. Assigns current.loading to true if anything is currently loading
+    vars.Watchers.UpdateAll(game);
+    current.loading = vars.Watchers["syncLoadCount"].Current > 0;
+    var worldString = vars.FNameToString(vars.Watchers["worldFName"].Current);
+    current.world = worldString != "None" ? worldString : old.world;
 
-//DEBUG CODE 
-//print(current.IGT.ToString()); 
-print(modules.First().ModuleMemorySize.ToString());
+    //DEBUG CODE 
+    //print(current.IGT.ToString()); 
+    print(modules.First().ModuleMemorySize.ToString());
 }
 
 start
