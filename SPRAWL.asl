@@ -45,7 +45,7 @@ init
 
 	vars.Watchers = new MemoryWatcherList
     {
-        new MemoryWatcher<int>(new DeepPointer(syncLoadCounterPtr)) { Name = "syncLoadCount" },
+        new MemoryWatcher<int>(new DeepPointer(syncLoadCounterPtr)) { Name = "syncLoadCount" }, // GSyncLoadCount
         new MemoryWatcher<ulong>(new DeepPointer(uWorld, 0x18)) { Name = "worldFName"}, // UWorld.Name
     };
 
