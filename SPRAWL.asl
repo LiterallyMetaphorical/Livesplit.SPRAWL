@@ -82,18 +82,6 @@ init
     }
 }
 
-
-
-gameTime 
-{   
-    // If the timer was autostarted by transitioning into E1M1, the game time should start on "vars.TimeOffset"
-    if(vars.setStartTime)
-    {
-        vars.setStartTime = false;
-        return TimeSpan.FromSeconds(vars.TimeOffset);
-    }
-}  
-
 update
 {
     vars.Watchers.UpdateAll(game);
@@ -123,6 +111,16 @@ start
 isLoading
 {
     return current.loading;
+}
+
+gameTime 
+{   
+    // If the timer was autostarted by transitioning into E1M1, the game time should start on "vars.TimeOffset"
+    if(vars.setStartTime)
+    {
+        vars.setStartTime = false;
+        return TimeSpan.FromSeconds(vars.TimeOffset);
+    }
 }
 
 split
