@@ -26,7 +26,7 @@ init
 {
     // Scanning the MainModule for static pointers to GSyncLoadCount, UWorld and FNamePool
     var scn = new SignatureScanner(game, game.MainModule.BaseAddress, game.MainModule.ModuleMemorySize);
-	var syncLoadTrg = new SigScanTarget(5, "89 43 60 8B 05 ?? ?? ?? ??") { OnFound = (p, s, ptr) => ptr + 0x4 + game.ReadValue<int>(ptr) };
+    var syncLoadTrg = new SigScanTarget(5, "89 43 60 8B 05 ?? ?? ?? ??") { OnFound = (p, s, ptr) => ptr + 0x4 + game.ReadValue<int>(ptr) };
     var syncLoadCounterPtr = scn.Scan(syncLoadTrg);
     var uWorldTrg = new SigScanTarget(8, "0F 2E ?? 74 ?? 48 8B 1D ?? ?? ?? ?? 48 85 DB 74") { OnFound = (p, s, ptr) => ptr + 0x4 + game.ReadValue<int>(ptr) };
     var uWorld = scn.Scan(uWorldTrg);
@@ -34,7 +34,7 @@ init
     var fNamePool = scn.Scan(fNamePoolTrg);
 
     // Throwing in case any base pointers can't be found (yet, hopefully)
-	if(syncLoadCounterPtr == IntPtr.Zero || uWorld == IntPtr.Zero || fNamePool == IntPtr.Zero)
+    if(syncLoadCounterPtr == IntPtr.Zero || uWorld == IntPtr.Zero || fNamePool == IntPtr.Zero)
     {
         throw new Exception("One or more base pointers not found - retrying");
     }
@@ -88,7 +88,6 @@ update
     // Get the current world name as string, only if *UWorld isnt null
     var worldFName = vars.Watchers["worldFName"].Current;
     current.world = worldFName != 0x0 ? vars.FNameToString(worldFName) : old.world;
-
 }
 
 start
