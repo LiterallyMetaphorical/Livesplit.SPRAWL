@@ -1,6 +1,6 @@
 // SPRAWL Load remover + Autosplitter written by Meta and Micrologist.
 // Giant shoutout to Micrologist for some fancy UE4 shit that works across most UE4 games or something? Huge.
-state("Sprawl-Win64-Shipping", "Steam v1.0"){}
+state("Sprawl-Win64-Shipping"){}
 
 startup
 {
