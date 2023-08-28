@@ -62,11 +62,13 @@ init
         return number == 0 ? name : name + "_" + number;
     });
 
+    vars.Watchers.UpdateAll(game);
+
     vars.startAfterLoad = false;
     vars.setStartTime = false;
-    current.loading = old.loading = false;
-    current.world = old.world = "";
-
+    current.loading = old.loading = vars.Watchers["syncLoadCount"].Current > 0;
+    current.world = old.world = vars.FNameToString(vars.Watchers["worldFName"].Current);
+    
     // Version detection, just in case
     switch (modules.First().ModuleMemorySize) 
     {
@@ -122,14 +124,7 @@ isLoading
     return current.loading;
 }
 
-/* Micrologists magic autosplitting, doesn't appear to work with Sprawl but gonna keep it here for reference
 split
 {
     return old.world != current.world  && current.world != "NeoMenu";
-}
-*/
-
-split
-{   // will clean this up later but it seems to work perfectly fine lol
-    return old.mission != current.mission && current.mission != "/Game/Maps/NeoMenu";
 }
