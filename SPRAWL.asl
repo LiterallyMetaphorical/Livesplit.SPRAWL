@@ -79,15 +79,11 @@ init
     }
 }
 
-onStart
-{
-    // part of the autostart countdown
-    vars.setStartTime = true;
-}
+
 
 gameTime 
 {   
-    //part of the autostart countdown
+    // If the timer was autostarted by transitioning into E1M1, the game time should start on "vars.TimeOffset"
     if(vars.setStartTime)
     {
         vars.setStartTime = false;
@@ -103,7 +99,7 @@ update
 
     // Get the current world name as string, only if *UWorld isnt null
     var worldFName = vars.Watchers["worldFName"].Current;
-    current.world = worldFname != 0x0 ? vars.FNameToString(worldFName) : old.world;
+    current.world = worldFName != 0x0 ? vars.FNameToString(worldFName) : old.world;
 }
 
 start
@@ -116,6 +112,7 @@ start
     if(vars.startAfterLoad && !current.loading)
     {
         vars.startAfterLoad = false;
+        vars.setStartTime = true;
         return true;
     }
 }
