@@ -4,22 +4,22 @@ state("Sprawl-Win64-Shipping"){}
 
 startup
 {
-	vars.TimeOffset = -27.85;
+    vars.TimeOffset = -27.85;
     if (timer.CurrentTimingMethod == TimingMethod.RealTime)
-	{        
-		var timingMessage = MessageBox.Show (
-			"This game uses Time without Loads (Game Time) as the main timing method.\n"+
-			"LiveSplit is currently set to show Real Time (RTA).\n"+
-			"Would you like to set the timing method to Game Time?",
-			"LiveSplit | SPRAWL",
-			MessageBoxButtons.YesNo,MessageBoxIcon.Question
-		);
-		
-		if (timingMessage == DialogResult.Yes)
-		{
-			timer.CurrentTimingMethod = TimingMethod.GameTime;
-		}
-	}
+    {        
+        var timingMessage = MessageBox.Show (
+            "This game uses Time without Loads (Game Time) as the main timing method.\n"+
+            "LiveSplit is currently set to show Real Time (RTA).\n"+
+            "Would you like to set the timing method to Game Time?",
+            "LiveSplit | SPRAWL",
+            MessageBoxButtons.YesNo,MessageBoxIcon.Question
+        );
+
+        if (timingMessage == DialogResult.Yes)
+        {
+            timer.CurrentTimingMethod = TimingMethod.GameTime;
+        }
+    }
 }
 
 init
