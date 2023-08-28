@@ -68,6 +68,7 @@ init
     vars.setStartTime = false;
     current.loading = old.loading = vars.Watchers["syncLoadCount"].Current > 0;
     current.world = old.world = vars.FNameToString(vars.Watchers["worldFName"].Current);
+    vars.worldsVisited = new List<String>() { "NeoMenu", current.world };
     
     // Version detection, just in case
     int moduleSize = modules.First().ModuleMemorySize;
@@ -91,11 +92,12 @@ update
     // Get the current world name as string, only if *UWorld isnt null
     var worldFName = vars.Watchers["worldFName"].Current;
     current.world = worldFName != 0x0 ? vars.FNameToString(worldFName) : old.world;
+
 }
 
 start
 {
-    if(old.world == "NeoMenu" && current.world != "NeoMenu")
+    if(old.world == "NeoMenu" && current.world != "NeoMenu") // TODO: Implement explicit IL mode that starts on all main menu -> mission transitions
     {
         vars.startAfterLoad = true;
     }
@@ -103,9 +105,17 @@ start
     if(vars.startAfterLoad && !current.loading)
     {
         vars.startAfterLoad = false;
-        vars.setStartTime = true;
+        if(current.world == "E1M1_Final") // TODO: IL-Mode start offsets for other missions?
+        {
+            vars.setStartTime = true;
+        }
         return true;
     }
+}
+
+onStart
+{
+    vars.worldsVisited = new List<String>() { "NeoMenu", current.world };
 }
 
 isLoading
@@ -125,5 +135,9 @@ gameTime
 
 split
 {
-    return old.world != current.world  && current.world != "NeoMenu";
+    if(current.world != old.world && !vars.worldsVisited.Contains(current.world))
+    {
+        vars.worldsVisited.Add(current.world);
+        return true;
+    }
 }
