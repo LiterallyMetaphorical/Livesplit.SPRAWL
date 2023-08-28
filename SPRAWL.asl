@@ -1,10 +1,6 @@
 // SPRAWL Load remover + Autosplitter written by Meta and Micrologist.
 // Giant shoutout to Micrologist for some fancy UE4 shit that works across most UE4 games or something? Huge.
-
-state("Sprawl-Win64-Shipping", "Steam v1.0")
-{
-    string150 mission : 0x04F04720, 0x8B0, 0x0;
-}
+state("Sprawl-Win64-Shipping"){}
 
 startup
 {
@@ -28,13 +24,7 @@ startup
 
 init
 {
-    // for the autostart countdown
-    vars.setStartTime = false;
-
-    /* 
-    This is some magic from Micrologist. My understanding is that it is multiple sig scans which target common Array of Bytes for various useful things and it can basically just 
-    be copy pasted for most modern UE4 titles
-    */ 
+    // Scanning the MainModule for static pointers to GSyncLoadCount, UWorld and FNamePool
     var scn = new SignatureScanner(game, game.MainModule.BaseAddress, game.MainModule.ModuleMemorySize);
 	var syncLoadTrg = new SigScanTarget(5, "89 43 60 8B 05 ?? ?? ?? ??") { OnFound = (p, s, ptr) => ptr + 0x4 + game.ReadValue<int>(ptr) };
     var syncLoadCounterPtr = scn.Scan(syncLoadTrg);
@@ -43,6 +33,7 @@ init
     var fNamePoolTrg = new SigScanTarget(13, "89 5C 24 ?? 89 44 24 ?? 74 ?? 48 8D 15") { OnFound = (p, s, ptr) => ptr + 0x4 + game.ReadValue<int>(ptr) };
     var fNamePool = scn.Scan(fNamePoolTrg);
 
+    // Throwing in case any base pointers can't be found (yet, hopefully)
 	if(syncLoadCounterPtr == IntPtr.Zero || uWorld == IntPtr.Zero || fNamePool == IntPtr.Zero)
     {
         throw new Exception("One or more base pointers not found - retrying");
@@ -50,10 +41,11 @@ init
 
 	vars.Watchers = new MemoryWatcherList
     {
-        new MemoryWatcher<int>(new DeepPointer(syncLoadCounterPtr)) { Name = "syncLoadCount" },
-        new MemoryWatcher<ulong>(new DeepPointer(uWorld, 0x18)) { Name = "worldFName"},
+        new MemoryWatcher<int>(new DeepPointer(syncLoadCounterPtr)) { Name = "syncLoadCount" }, // GSyncLoadCount
+        new MemoryWatcher<ulong>(new DeepPointer(uWorld, 0x18)) { Name = "worldFName"}, // UWorld.Name
     };
 
+    // Translating FName to String, this *could* be cached
     vars.FNameToString = (Func<ulong, string>)(fName =>
     {
         var number   = (fName & 0xFFFFFFFF00000000) >> 0x20;
@@ -66,53 +58,42 @@ init
         return number == 0 ? name : name + "_" + number;
     });
 
-    vars.startAfterLoad = false;
-    current.loading = old.loading = false;
-    current.world = old.world = "";
+    vars.Watchers.UpdateAll(game);
 
-    // Version detecter/switcher. This needs to come after Micrologists magic for some reason otherwise it'll throw an error for the Watchers var in update.
-    switch (modules.First().ModuleMemorySize) 
+    vars.startAfterLoad = false;
+    vars.setStartTime = false;
+    current.loading = old.loading = vars.Watchers["syncLoadCount"].Current > 0;
+    current.world = old.world = vars.FNameToString(vars.Watchers["worldFName"].Current);
+    vars.worldsVisited = new List<String>() { "NeoMenu", current.world };
+    
+    // Version detection, just in case
+    int moduleSize = modules.First().ModuleMemorySize;
+    switch (moduleSize) 
     {
-        case 87826432:
+        case 0x53C2000:
             version = "Steam v1.0";
             break;
-    default:
-        print("Unknown version detected");
-        break;
+        default:                                
+            version = "Unknown " + moduleSize.ToString("X8");
+            break;
     }
 }
-
-onStart
-{
-    // part of the autostart countdown
-    vars.setStartTime = true;
-}
-
-gameTime 
-{   //part of the autostart countdown
-    if(vars.setStartTime)
-    {
-      vars.setStartTime = false;
-      return TimeSpan.FromSeconds(vars.TimeOffset);
-    }
-}  
 
 update
 {
-// Part of Micrologists magic. Assigns current.loading to true if anything is currently loading
-vars.Watchers.UpdateAll(game);
-current.loading = vars.Watchers["syncLoadCount"].Current > 0;
-var worldString = vars.FNameToString(vars.Watchers["worldFName"].Current);
-current.world = worldString != "None" ? worldString : old.world;
+    vars.Watchers.UpdateAll(game);
+    // The game is loading if any scenes are loading synchronously
+    current.loading = vars.Watchers["syncLoadCount"].Current > 0;
 
-//DEBUG CODE 
-//print(current.IGT.ToString()); 
-print(modules.First().ModuleMemorySize.ToString());
+    // Get the current world name as string, only if *UWorld isnt null
+    var worldFName = vars.Watchers["worldFName"].Current;
+    current.world = worldFName != 0x0 ? vars.FNameToString(worldFName) : old.world;
+
 }
 
 start
 {
-    if(old.world == "NeoMenu" && current.world != "NeoMenu")
+    if(old.world == "NeoMenu" && current.world != "NeoMenu") // TODO: Implement explicit IL mode that starts on all main menu -> mission transitions
     {
         vars.startAfterLoad = true;
     }
@@ -120,8 +101,17 @@ start
     if(vars.startAfterLoad && !current.loading)
     {
         vars.startAfterLoad = false;
+        if(current.world == "E1M1_Final") // TODO: IL-Mode start offsets for other missions?
+        {
+            vars.setStartTime = true;
+        }
         return true;
     }
+}
+
+onStart
+{
+    vars.worldsVisited = new List<String>() { "NeoMenu", current.world };
 }
 
 isLoading
@@ -129,14 +119,21 @@ isLoading
     return current.loading;
 }
 
-/* Micrologists magic autosplitting, doesn't appear to work with Sprawl but gonna keep it here for reference
-split
-{
-    return old.world != current.world  && current.world != "NeoMenu";
+gameTime 
+{   
+    // If the timer was autostarted by transitioning into E1M1, the game time should start on "vars.TimeOffset"
+    if(vars.setStartTime)
+    {
+        vars.setStartTime = false;
+        return TimeSpan.FromSeconds(vars.TimeOffset);
+    }
 }
-*/
 
 split
-{   // will clean this up later but it seems to work perfectly fine lol
-    return old.mission != current.mission && current.mission != "/Game/Maps/NeoMenu";
+{
+    if(current.world != old.world && !vars.worldsVisited.Contains(current.world))
+    {
+        vars.worldsVisited.Add(current.world);
+        return true;
+    }
 }
