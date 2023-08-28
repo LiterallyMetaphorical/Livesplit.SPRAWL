@@ -70,13 +70,14 @@ init
     current.world = old.world = vars.FNameToString(vars.Watchers["worldFName"].Current);
     
     // Version detection, just in case
-    switch (modules.First().ModuleMemorySize) 
+    int moduleSize = modules.First().ModuleMemorySize;
+    switch (moduleSize) 
     {
-        case 87826432:
+        case 0x53C2000:
             version = "Steam v1.0";
             break;
-        default:
-            print("Unknown version detected");
+        default:                                
+            version = "Unknown " + moduleSize.ToString("X8");
             break;
     }
 }
