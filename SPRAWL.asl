@@ -28,13 +28,7 @@ startup
 
 init
 {
-    // for the autostart countdown
-    vars.setStartTime = false;
-
-    /* 
-    This is some magic from Micrologist. My understanding is that it is multiple sig scans which target common Array of Bytes for various useful things and it can basically just 
-    be copy pasted for most modern UE4 titles
-    */ 
+    // Scanning the MainModule for static pointers to GSyncLoadCount, UWorld and FNamePool
     var scn = new SignatureScanner(game, game.MainModule.BaseAddress, game.MainModule.ModuleMemorySize);
 	var syncLoadTrg = new SigScanTarget(5, "89 43 60 8B 05 ?? ?? ?? ??") { OnFound = (p, s, ptr) => ptr + 0x4 + game.ReadValue<int>(ptr) };
     var syncLoadCounterPtr = scn.Scan(syncLoadTrg);
@@ -43,6 +37,7 @@ init
     var fNamePoolTrg = new SigScanTarget(13, "89 5C 24 ?? 89 44 24 ?? 74 ?? 48 8D 15") { OnFound = (p, s, ptr) => ptr + 0x4 + game.ReadValue<int>(ptr) };
     var fNamePool = scn.Scan(fNamePoolTrg);
 
+    // Throwing in case any base pointers can't be found (yet, hopefully)
 	if(syncLoadCounterPtr == IntPtr.Zero || uWorld == IntPtr.Zero || fNamePool == IntPtr.Zero)
     {
         throw new Exception("One or more base pointers not found - retrying");
@@ -51,9 +46,10 @@ init
 	vars.Watchers = new MemoryWatcherList
     {
         new MemoryWatcher<int>(new DeepPointer(syncLoadCounterPtr)) { Name = "syncLoadCount" },
-        new MemoryWatcher<ulong>(new DeepPointer(uWorld, 0x18)) { Name = "worldFName"},
+        new MemoryWatcher<ulong>(new DeepPointer(uWorld, 0x18)) { Name = "worldFName"}, // UWorld.Name
     };
 
+    // Translating FName to String, this *could* be cached
     vars.FNameToString = (Func<ulong, string>)(fName =>
     {
         var number   = (fName & 0xFFFFFFFF00000000) >> 0x20;
@@ -67,10 +63,11 @@ init
     });
 
     vars.startAfterLoad = false;
+    vars.setStartTime = false;
     current.loading = old.loading = false;
     current.world = old.world = "";
 
-    // Version detecter/switcher. This needs to come after Micrologists magic for some reason otherwise it'll throw an error for the Watchers var in update.
+    // Version detection, just in case
     switch (modules.First().ModuleMemorySize) 
     {
         case 87826432:
@@ -93,22 +90,20 @@ gameTime
     //part of the autostart countdown
     if(vars.setStartTime)
     {
-      vars.setStartTime = false;
-      return TimeSpan.FromSeconds(vars.TimeOffset);
+        vars.setStartTime = false;
+        return TimeSpan.FromSeconds(vars.TimeOffset);
     }
 }  
 
 update
 {
-    // Part of Micrologists magic. Assigns current.loading to true if anything is currently loading
     vars.Watchers.UpdateAll(game);
+    // The game is loading if any scenes are loading synchronously
     current.loading = vars.Watchers["syncLoadCount"].Current > 0;
-    var worldString = vars.FNameToString(vars.Watchers["worldFName"].Current);
-    current.world = worldString != "None" ? worldString : old.world;
 
-    //DEBUG CODE 
-    //print(current.IGT.ToString()); 
-    print(modules.First().ModuleMemorySize.ToString());
+    // Get the current world name as string, only if *UWorld isnt null
+    var worldFName = vars.Watchers["worldFName"].Current;
+    current.world = worldFname != 0x0 ? vars.FNameToString(worldFName) : old.world;
 }
 
 start
