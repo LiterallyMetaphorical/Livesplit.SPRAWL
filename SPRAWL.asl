@@ -6,7 +6,7 @@ startup
 {
     vars.TimeOffset = -27.85;
     if (timer.CurrentTimingMethod == TimingMethod.RealTime)
-    {        
+    {
         var timingMessage = MessageBox.Show (
             "This game uses Time without Loads (Game Time) as the main timing method.\n"+
             "LiveSplit is currently set to show Real Time (RTA).\n"+
@@ -92,7 +92,7 @@ update
 
 start
 {
-    if(old.world == "NeoMenu" && current.world != "NeoMenu") // TODO: Implement explicit IL mode that starts on all main menu -> mission transitions
+    if(old.world == "NeoMenu" && current.world == "E1M1_Final") 
     {
         vars.startAfterLoad = true;
     }
@@ -100,10 +100,7 @@ start
     if(vars.startAfterLoad && !current.loading)
     {
         vars.startAfterLoad = false;
-        if(current.world == "E1M1_Final") // TODO: IL-Mode start offsets for other missions?
-        {
-            vars.setStartTime = true;
-        }
+        vars.setStartTime = true;
         return true;
     }
 }
