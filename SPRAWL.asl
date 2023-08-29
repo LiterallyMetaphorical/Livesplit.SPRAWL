@@ -25,7 +25,7 @@ startup
 
 init
 {
-    // Scanning the MainModule for static pointers to GSyncLoadCount, UWorld and FNamePool
+    // Scanning the MainModule for static pointers to GSyncLoadCount, UWorld, UEngine and FNamePool
     var scn = new SignatureScanner(game, game.MainModule.BaseAddress, game.MainModule.ModuleMemorySize);
     var syncLoadTrg = new SigScanTarget(5, "89 43 60 8B 05 ?? ?? ?? ??") { OnFound = (p, s, ptr) => ptr + 0x4 + game.ReadValue<int>(ptr) };
     var syncLoadCounterPtr = scn.Scan(syncLoadTrg);
