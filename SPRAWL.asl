@@ -4,7 +4,6 @@ state("Sprawl-Win64-Shipping"){}
 
 startup
 {
-    vars.TimeOffset = -27.85;
     if (timer.CurrentTimingMethod == TimingMethod.RealTime)
     {
         var timingMessage = MessageBox.Show (
@@ -89,6 +88,7 @@ init
     current.loading = old.loading = vars.Watchers["syncLoadCount"].Current > 0;
     current.world = old.world = vars.FNameToString(vars.Watchers["worldFName"].Current);
     vars.worldsVisited = new List<String>() { "Credits_Map", "NeoMenu", current.world };
+    vars.timeToSet = 0f;
     
     // Version detection, just in case anything breaks
     int moduleSize = modules.First().ModuleMemorySize;
@@ -128,7 +128,7 @@ start
         vars.startAfterLoad = false;
         if(current.world == "E1M1_Final")
         {
-            vars.setStartTime = true;
+            vars.timeToSet = -27.85f;
         }
         return true;
     }
@@ -153,10 +153,11 @@ isLoading
 gameTime 
 {   
     // If the timer was autostarted by transitioning into E1M1, the game time should start on "vars.TimeOffset"
-    if(vars.setStartTime)
+    if(vars.timeToSet != 0f)
     {
-        vars.setStartTime = false;
-        return TimeSpan.FromSeconds(vars.TimeOffset);
+        var time = vars.timeToSet;
+        vars.timeToSet = 0f;
+        return TimeSpan.FromSeconds(time);
     }
 }
 
