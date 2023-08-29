@@ -1,5 +1,4 @@
-// SPRAWL Load remover + Autosplitter written by Meta and Micrologist.
-// Giant shoutout to Micrologist for some fancy UE4 shit that works across most UE4 games or something? Huge.
+// SPRAWL Load remover + Autosplitter written by Meta and Micrologist
 state("Sprawl-Win64-Shipping"){}
 
 startup
@@ -50,6 +49,8 @@ init
         new MemoryWatcher<ulong>(new DeepPointer(uWorld, 0x18)) { Name = "worldFName"},
         // GameEngine.GameInstance.LocalPlayers[0].PlayerController.PlayerCameraManager.ViewTarget.Target.Name
         new MemoryWatcher<ulong>(new DeepPointer(gameEngine, 0xD28, 0x38, 0x0, 0x30, 0x2B8, 0xE90, 0x18)) { Name = "camViewTargetFName"},
+        // GameEngine.Gameinstance.LocalPlayers[0].PlayerController.MyHUD.PawnSpecificWidgets[0].UI_LevelEndScreen
+        //new MemoryWatcher<IntPtr>(new DeepPointer(gameEngine, 0xD28, 0x38, 0x0, 0x30, 0x2B0, 0x310, 0x0, 0x2E0)) { Name = "levelEndScreenPtr"},
     };
 
     // Translating FName to String, this *could* be cached
@@ -91,14 +92,22 @@ init
 update
 {
     vars.Watchers.UpdateAll(game);
-    // The game is loading if any scenes are loading synchronously
+
+    // The game is considered to be loading if any scenes are loading synchronously
     current.loading = vars.Watchers["syncLoadCount"].Current > 0;
 
     // Get the current world name as string, only if *UWorld isnt null
     var worldFName = vars.Watchers["worldFName"].Current;
     current.world = worldFName != 0x0 ? vars.FNameToString(worldFName) : old.world;
 
+    // Get the Name of the current target for the CameraManager
     current.camTarget = vars.FNameToString(vars.Watchers["camViewTargetFName"].Current);
+
+    /* Check if the end screen is visible but not closeable
+    var endScreenPtr = vars.Watchers["levelEndScreenPtr"].Current;
+    var waitingForEndScreen = endScreenPtr != IntPtr.Zero ? game.ReadValue<byte>((IntPtr)endScreenPtr+0xC3) == 0x0 && !game.ReadValue<bool>((IntPtr)endScreenPtr+0x2E8) : false;
+    */
+
 }
 
 start
@@ -153,6 +162,7 @@ split
         return true;
     }
 
+    // This tracks the transition to cutscene at the end of E3M3
     if(current.world == "E3M3" && current.camTarget != old.camTarget && current.camTarget == "CameraActor_2")
     {
         return true;
