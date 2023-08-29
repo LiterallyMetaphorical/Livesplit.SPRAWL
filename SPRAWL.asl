@@ -69,7 +69,6 @@ init
     vars.Watchers.UpdateAll(game);
 
     vars.startAfterLoad = false;
-    vars.setStartTime = false;
     current.loading = old.loading = vars.Watchers["syncLoadCount"].Current > 0;
     current.world = old.world = vars.FNameToString(vars.Watchers["worldFName"].Current);
     vars.worldsVisited = new List<String>() { "Credits_Map", "NeoMenu", current.world };
