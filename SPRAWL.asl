@@ -19,7 +19,7 @@ startup
             timer.CurrentTimingMethod = TimingMethod.GameTime;
         }
     }
-    
+
     settings.Add("ILMode", false, "Start the timer when loading into any level (IL Mode)");
 }
 
@@ -72,7 +72,8 @@ init
     current.loading = old.loading = vars.Watchers["syncLoadCount"].Current > 0;
     current.world = old.world = vars.FNameToString(vars.Watchers["worldFName"].Current);
     vars.worldsVisited = new List<String>() { "Credits_Map", "NeoMenu", current.world };
-    vars.timeToSet = 0f;
+    vars.startTime = 0f;
+    vars.setStartTime = false;
     
     // Version detection, just in case anything breaks
     int moduleSize = modules.First().ModuleMemorySize;
@@ -112,7 +113,8 @@ start
         vars.startAfterLoad = false;
         if(current.world == "E1M1_Final")
         {
-            vars.timeToSet = -27.85f;
+            vars.startTime = -27.85f;
+            vars.setStartTime = true;
         }
         return true;
     }
@@ -136,11 +138,10 @@ isLoading
 
 gameTime 
 {   
-    if(vars.timeToSet != 0f)
+    if(vars.setStartTime)
     {
-        var time = vars.timeToSet;
-        vars.timeToSet = 0f;
-        return TimeSpan.FromSeconds(time);
+        vars.setStartTime = false;
+        return TimeSpan.FromSeconds(vars.startTime);
     }
 }
 
