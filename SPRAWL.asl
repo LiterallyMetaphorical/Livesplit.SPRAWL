@@ -108,6 +108,12 @@ start
 onStart
 {
     vars.worldsVisited = new List<String>() { "NeoMenu", current.world };
+    
+    // This keeps the timer at 00:00 if the run is manually started during loading
+    if(current.loading)
+    {
+        timer.IsGameTimePaused = true;
+    }
 }
 
 isLoading
