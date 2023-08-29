@@ -66,7 +66,7 @@ init
     current.world = old.world = vars.FNameToString(vars.Watchers["worldFName"].Current);
     vars.worldsVisited = new List<String>() { "NeoMenu", current.world };
     
-    // Version detection, just in case
+    // Version detection, just in case anything breaks
     int moduleSize = modules.First().ModuleMemorySize;
     switch (moduleSize) 
     {
