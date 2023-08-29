@@ -20,6 +20,24 @@ startup
             timer.CurrentTimingMethod = TimingMethod.GameTime;
         }
     }
+
+    vars.SetTextComponent = (Action<string, string>)((id, text) =>
+    {
+        var textSettings = timer.Layout.Components.Where(x => x.GetType().Name == "TextComponent").Select(x => x.GetType().GetProperty("Settings").GetValue(x, null));
+        var textSetting = textSettings.FirstOrDefault(x => (x.GetType().GetProperty("Text1").GetValue(x, null) as string) == id);
+        if (textSetting == null)
+        {
+            var textComponentAssembly = Assembly.LoadFrom("Components\\LiveSplit.Text.dll");
+            var textComponent = Activator.CreateInstance(textComponentAssembly.GetType("LiveSplit.UI.Components.TextComponent"), timer);
+            timer.Layout.LayoutComponents.Add(new LiveSplit.UI.Components.LayoutComponent("LiveSplit.Text.dll", textComponent as LiveSplit.UI.Components.IComponent));
+            textSetting = textComponent.GetType().GetProperty("Settings", BindingFlags.Instance | BindingFlags.Public).GetValue(textComponent, null);
+            textSetting.GetType().GetProperty("Text1").SetValue(textSetting, id);
+        }
+        if (textSetting != null)
+            textSetting.GetType().GetProperty("Text2").SetValue(textSetting, text);
+    });
+
+    settings.Add("ILMode", false, "Start the timer when loading into any level (IL Mode)");
 }
 
 init
@@ -30,11 +48,13 @@ init
     var syncLoadCounterPtr = scn.Scan(syncLoadTrg);
     var uWorldTrg = new SigScanTarget(8, "0F 2E ?? 74 ?? 48 8B 1D ?? ?? ?? ?? 48 85 DB 74") { OnFound = (p, s, ptr) => ptr + 0x4 + game.ReadValue<int>(ptr) };
     var uWorld = scn.Scan(uWorldTrg);
+    var gameEngineTrg = new SigScanTarget(3, "48 39 35 ?? ?? ?? ?? 0F 85 ?? ?? ?? ?? 48 8B 0D") { OnFound = (p, s, ptr) => ptr + 0x4 + game.ReadValue<int>(ptr) };
+    var gameEngine = scn.Scan(gameEngineTrg);
     var fNamePoolTrg = new SigScanTarget(13, "89 5C 24 ?? 89 44 24 ?? 74 ?? 48 8D 15") { OnFound = (p, s, ptr) => ptr + 0x4 + game.ReadValue<int>(ptr) };
     var fNamePool = scn.Scan(fNamePoolTrg);
 
     // Throwing in case any base pointers can't be found (yet, hopefully)
-    if(syncLoadCounterPtr == IntPtr.Zero || uWorld == IntPtr.Zero || fNamePool == IntPtr.Zero)
+    if(syncLoadCounterPtr == IntPtr.Zero || uWorld == IntPtr.Zero || gameEngine == IntPtr.Zero || fNamePool == IntPtr.Zero)
     {
         throw new Exception("One or more base pointers not found - retrying");
     }
@@ -43,6 +63,7 @@ init
     {
         new MemoryWatcher<int>(new DeepPointer(syncLoadCounterPtr)) { Name = "syncLoadCount" }, // GSyncLoadCount
         new MemoryWatcher<ulong>(new DeepPointer(uWorld, 0x18)) { Name = "worldFName"}, // UWorld.Name
+        new MemoryWatcher<ulong>(new DeepPointer(gameEngine, 0xD28, 0x38, 0x0, 0x30, 0x2B8, 0xE90, 0x18)) { Name = "camViewTargetFName"},
     };
 
     // Translating FName to String, this *could* be cached
@@ -64,7 +85,7 @@ init
     vars.setStartTime = false;
     current.loading = old.loading = vars.Watchers["syncLoadCount"].Current > 0;
     current.world = old.world = vars.FNameToString(vars.Watchers["worldFName"].Current);
-    vars.worldsVisited = new List<String>() { "NeoMenu", current.world };
+    vars.worldsVisited = new List<String>() { "Credits_Map", "NeoMenu", current.world };
     
     // Version detection, just in case anything breaks
     int moduleSize = modules.First().ModuleMemorySize;
@@ -88,11 +109,13 @@ update
     // Get the current world name as string, only if *UWorld isnt null
     var worldFName = vars.Watchers["worldFName"].Current;
     current.world = worldFName != 0x0 ? vars.FNameToString(worldFName) : old.world;
+
+    current.camTarget = vars.FNameToString(vars.Watchers["camViewTargetFName"].Current);
 }
 
 start
 {
-    if(old.world == "NeoMenu" && current.world == "E1M1_Final") 
+    if(old.world == "NeoMenu" && current.world != old.world && (current.world == "E1M1_Final" || settings["ILMode"]))
     {
         vars.startAfterLoad = true;
     }
@@ -100,14 +123,17 @@ start
     if(vars.startAfterLoad && !current.loading)
     {
         vars.startAfterLoad = false;
-        vars.setStartTime = true;
+        if(current.world == "E1M1_Final")
+        {
+            vars.setStartTime = true;
+        }
         return true;
     }
 }
 
 onStart
 {
-    vars.worldsVisited = new List<String>() { "NeoMenu", current.world };
+    vars.worldsVisited = new List<String>() { "Credits_Map", "NeoMenu", current.world };
     
     // This keeps the timer at 00:00 if the run is manually started during loading
     if(current.loading)
@@ -136,6 +162,11 @@ split
     if(current.world != old.world && !vars.worldsVisited.Contains(current.world))
     {
         vars.worldsVisited.Add(current.world);
+        return true;
+    }
+
+    if(current.world == "E3M3" && current.camTarget != old.camTarget && current.camTarget == "CameraActor_2")
+    {
         return true;
     }
 }
