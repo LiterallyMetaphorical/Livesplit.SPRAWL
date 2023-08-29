@@ -152,7 +152,6 @@ isLoading
 
 gameTime 
 {   
-    // If the timer was autostarted by transitioning into E1M1, the game time should start on "vars.TimeOffset"
     if(vars.timeToSet != 0f)
     {
         var time = vars.timeToSet;
